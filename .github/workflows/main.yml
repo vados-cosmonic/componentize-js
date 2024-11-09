@@ -19,7 +19,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
     - name: Install Rust
       run: |
         rustup update stable
@@ -31,7 +31,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
       with:
         submodules: recursive
 
@@ -46,7 +46,7 @@ jobs:
         node-version: ${{matrix.node-version}}
 
     - name: Cache Rust dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # 4.1.2
       id: rust-build
       with:
         path: target
@@ -60,14 +60,14 @@ jobs:
       run: echo "STARLINGMONKEY_HASH=$(git submodule status | head -c9 | tail -c8)" >> "$GITHUB_OUTPUT"
 
     - name: Cache StarlingMonkey
-      uses: actions/cache@v3
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # 4.1.2
       id: starlingmonkey-build-jit
       with:
         path: build-release
         key: engine-build-jit-${{ steps.starlingmonkey-commit.outputs.STARLINGMONKEY_HASH }}
 
     - name: Cache StarlingMonkey (Weval)
-      uses: actions/cache@v3
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # 4.1.2
       id: starlingmonkey-build-aot
       with:
         path: build-release-weval
@@ -91,7 +91,7 @@ jobs:
           - '22'
           - latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
 
     - uses: actions/setup-node@v2
       with:
@@ -101,7 +101,7 @@ jobs:
       run: npm install
 
     - name: Restore StarlingMonkey from cache
-      uses: actions/cache/restore@v3
+      uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # 4.1.2
       id: rust-build
       with:
         path: target
@@ -111,7 +111,7 @@ jobs:
       run: npm run test
 
     - name: Cache Example build
-      uses: actions/cache@v3
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # 4.1.2
       with:
         path: example/target
         key: example-cargo-${{ hashFiles('example/src/main.rs', 'example/Cargo.lock', 'example/hello.wit') }}
@@ -133,7 +133,7 @@ jobs:
     env:
       ENABLE_AOT: "1"
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
 
     - uses: actions/setup-node@v2
       with:
@@ -143,7 +143,7 @@ jobs:
       run: npm install
 
     - name: Restore StarlingMonkey (Weval) from cache
-      uses: actions/cache/restore@v3
+      uses: actions/cache/restore@6849a6489940f00c2f30c0fb92c6274307ccb58a # 4.1.2
       id: rust-build
       with:
         path: target
@@ -153,7 +153,7 @@ jobs:
       run: npm run test:weval
 
     - name: Cache Example build
-      uses: actions/cache@v3
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # 4.1.2
       with:
         path: example/target
         key: example-${{ hashFiles('example/src/main.rs', 'example/Cargo.lock', 'example/hello.wit') }}
