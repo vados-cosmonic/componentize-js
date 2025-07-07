@@ -44,7 +44,7 @@ jobs:
         id: cache-node-modules
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
-          key: node-modules-dev-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package.json') }}
+          key: node-modules-dev-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
           path: |
             node_modules
       - name: Install debug NPM packages
@@ -109,6 +109,9 @@ jobs:
       matrix:
         rust-version:
           - 1.80.0
+    outputs:
+      attestation-id: ${{ steps.attestation.outputs.attestation-id }}
+      attestation-url: ${{ steps.attestation.outputs.attestation-url }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -133,7 +136,7 @@ jobs:
       - name: Cache npm install
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
-          key: node-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package.json') }}
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
           path: |
             node_modules
 
@@ -141,25 +144,25 @@ jobs:
         run: |
           npm install
 
-      - name: Perform release build
-        run: |
-          npm run build:release
-
       - name: Create release package
         working-directory: ${{ needs.meta.outputs.project-dir }}
         run: |
           npm pack
 
       - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        id: attestation
         with:
-          subject-path: ${{ needs.meta.outputs.artifacts-glob }}
+          subject-path: ${{ needs.meta.outputs.artifact-name }}
+
+      - run: |
+          mv ${{ steps.attestation.outputs.bundle-path }} attestation.json
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           if-no-files-found: error
-          name: componentize-js
           path: |
-            ${{ needs.meta.outputs.artifacts-glob }}
+            ${{ needs.meta.outputs.artifact-name }}
+            attestation.json
 
   test-npm-release:
     runs-on: ubuntu-24.04
@@ -176,10 +179,10 @@ jobs:
       - name: Test built componentize-js NPM package
         shell: bash
         run: |
-          export PACKAGE_DIR=${{ github.workspace }}/artifacts/componentize-js/${{ needs.meta.outputs.artifact-name }}
+          export PACKAGE_FILE_PATH=${{ github.workspace }}/artifacts/artifact/${{ needs.meta.outputs.artifact-name }}
           cp -r examples/hello-world/guest /tmp/test
           cd /tmp/test
-          npm install --save $PACKAGE_DIR
+          npm install --save $PACKAGE_FILE_PATH
           npm run all
 
   npm-publish:
@@ -191,6 +194,10 @@ jobs:
       PREPACK_SKIP_BUILD: "true"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ">=22"
 
       - name: Add npmrc
         run: |
@@ -205,7 +212,8 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         shell: bash
         run: |
-          export PACKAGE_DIR=${{ github.workspace }}/artifacts/componentize-js/${{ needs.meta.outputs.artifact-name }}
+          export PACKAGE_FILE_PATH=${{ github.workspace }}/artifacts/artifact/${{ needs.meta.outputs.artifact-name }}
+          export ATTESTATION_FILE_PATH=${{ github.workspace }}/artifacts/artifact/attestation.json
 
           export OPT_DRY_RUN="--dry-run"
           if [ "tag" == "${{ github.ref_type }}" ]; then
@@ -217,7 +225,14 @@ jobs:
             export OPT_RELEASE_TAG="--tag ${{ needs.meta.outputs.prerelease-tag }}";
           fi
 
-          npm publish -w @bytecodealliance/componentize-js $OPT_DRY_RUN $OPT_RELEASE_TAG $PACKAGE_DIR --access=public
+          npm publish \
+            --verbose \
+            -w @bytecodealliance/componentize-js \
+            --access=public \
+            --provenance-file=$ATTESTATION_FILE_PATH \
+            $OPT_DRY_RUN \
+            $OPT_RELEASE_TAG \
+            $PACKAGE_FILE_PATH
 
   create-gh-release:
     runs-on: ubuntu-24.04
