@@ -120,7 +120,11 @@ pub fn stub_wasi(
         target_world_imports.insert(resolve.name_canonicalized_world_key(key));
     }
 
-    let mut module = Module::parse(wasm.as_slice(), false).unwrap();
+    // NOTE: enabling multi-memory here is done not because multi-memories should be used, but rather
+    // because in the short term wirm will remove memory growing operations are disabled.
+    //
+    // This is enabled here only until this can be fixed by upstream `wirm` (formerly `orca`)
+    let mut module = Module::parse(wasm.as_slice(), true).unwrap();
 
     stub_preview1(&mut module)?;
 
