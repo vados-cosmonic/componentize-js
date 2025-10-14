@@ -24,6 +24,7 @@ export function maybeLogging(disableFeatures) {
   return disableFeatures;
 }
 
+// THE FUNCTION HANGS ON WINDOWS
 export async function setupComponent(opts) {
   const componentizeSrc = opts?.componentize?.src;
   const componentizeOpts = opts?.componentize?.opts;
